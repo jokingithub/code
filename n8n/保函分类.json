@@ -1,0 +1,376 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "89dc0616-eb7f-4b39-b83e-6dc208ff1781",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -320,
+        304
+      ],
+      "id": "45c34734-29f6-42d5-b434-db03bc601e11",
+      "name": "Webhook",
+      "webhookId": "89dc0616-eb7f-4b39-b83e-6dc208ff1782"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d5db6358-59c9-4ddd-a6f9-0d03cf21a50f",
+              "leftValue": "={{ $json.body.docType }}",
+              "rightValue": "doc",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "d8168cc2-24a0-40d3-bb31-601bdf38eed9",
+              "leftValue": "={{ $json.body.docType }}",
+              "rightValue": "pdf",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -96,
+        304
+      ],
+      "id": "63d6828b-0405-4628-9045-3e1d2ab6c447",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "model": "qwen3:8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        592,
+        224
+      ],
+      "id": "f2b8d166-92de-4917-a6b4-8e44bc8a322a",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "oDWLPjLqyFZJYkpd",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"保函类型\": \n      \"string\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        720,
+        224
+      ],
+      "id": "3a3b7b60-fe62-46c8-a350-5c7545a25428",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=下面是一份保函\n{{ $json.text }}\n，其类型有独立见索即付保函、独立附单据保函、一般责任保证保函和连带责任保证保函。请根据保函内容，仔细判断此保函是哪种类型。输出结果格式必须使用{\n\"保函类型\": \"\"\n}的json格式。",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "系统提示词（分类版）\n你是一名精通金融与法律的专家，尤其擅长解释保函及担保制度。回答时请根据以下分类要点，准确区分不同保函：\n独立见索即付保函\n核心特征：独立于基础交易；受益人只需提出付款请求即可，开立人必须无条件支付。\n判断要点：是否仅凭“索赔请求”即触发付款义务。\n独立附单据保函\n核心特征：同样独立于基础交易，但需提交符合条款的单据才能付款。\n判断要点：是否要求“单据审查”作为付款条件。\n一般责任保证保函\n核心特征：依赖基础交易；债权人须先向债务人追偿，保证人承担补充责任。\n判断要点：是否享有“先诉抗辩权”。\n连带责任保证保函\n核心特征：依赖基础交易；债权人可直接要求保证人履行，无需先向债务人追偿。\n判断要点：是否“无先诉抗辩权”。\n总结规则\n先区分 独立性（独立保函 vs 一般/连带责任保证保函）。\n再区分 触发条件（见索即付 vs 附单据）。\n最后区分 责任顺序（一般责任 vs 连带责任）。\n回答时需专业、条理化，用准确法律与金融术语进行说明。"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        576,
+        0
+      ],
+      "id": "49a42f9e-fecb-45bc-aee8-a18d533d2e0f",
+      "name": "判断保函格式"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=下面是一份保函\n{{ $json.text }}\n，其类型有履约保函、农民工工资保函、预付款保函、质量保函、工资、投标保函、业主支付保函。请根据保函内容，仔细判断此保函是哪种类型。输出结果格式必须使用{\n\"保函类型\": \"\"\n}的json格式。",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "角色设定：\n你是一名精通金融与法律的专家，尤其熟悉保函及担保制度。请根据保函的受益人、保障对象和触发条件，准确区分不同保函类型。\n分类维度及判断逻辑：\n履约保函（Performance Bond）\n核心特征：保证承包商/供应商按合同履行义务。\n受益人：业主或债权人。\n触发条件：承包方未履约。\n农民工工资保函（Labor Wage Guarantee）\n核心特征：专门保障建筑施工中的农民工工资支付。\n受益人：农民工或政府/监管机构（通常为劳动保障部门）。\n触发条件：承包商未支付农民工工资。\n判断要点：关注受益人为农民工或法律规定的劳动保障受益人；用途限定在农民工工资。\n一般工资保函（Wage Guarantee）\n核心特征：保障企业员工工资支付，包括非农民工人员。\n受益人：公司内部员工或劳务合同签约方。\n触发条件：企业未按合同或法律支付工资。\n判断要点：适用范围更广，不仅限于建筑施工农民工；受益人为普通员工。\n预付款保函（Advance Payment Guarantee）\n核心特征：保障预付款安全。\n受益人：业主/发包方。\n触发条件：承包商未按合同使用预付款或提前违约。\n质量保函（Warranty / Quality Guarantee）\n核心特征：保障合同履约后的工程或产品质量。\n受益人：业主或购买方。\n触发条件：工程或产品质量不合格。\n投标保函（Bid Bond / Tender Guarantee）\n核心特征：保障投标方履行投标义务或签署合同。\n受益人：招标方。\n触发条件：中标方拒绝签合同或未提供履约保函。\n业主支付保函（Payment Guarantee by Owner）\n核心特征：保障承包商或供应商按合同收款。\n受益人：承包商/供应商。\n触发条件：业主未按合同支付款项。\n输出要求：\n按用途分类：履约、农民工、预付款、质量、工资、投标、业主支付\n说明核心特征：受益人、触发条件、保障目的\n可结合保函类型判断：独立见索即付/附单据/一般责任/连带责任"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        576,
+        512
+      ],
+      "id": "6631f411-091d-4270-a15e-f7e9b8bc4c1e",
+      "name": "判断保函产品"
+    },
+    {
+      "parameters": {
+        "model": "qwen3:8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        592,
+        736
+      ],
+      "id": "120f04e6-09ef-4f65-92eb-e48a550ff217",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "oDWLPjLqyFZJYkpd",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"保函类型\": \n      \"string\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        720,
+        736
+      ],
+      "id": "7737fde3-b147-41c2-88b2-4ae5db07caad",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/vlchat",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "docContent"
+            },
+            {
+              "name": "prompt",
+              "value": "识别并提取图片上的所有文字内容，保持原样，不要修改。 输出字段 \"文本内容\"，字符串形式保存完整文本。"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        128,
+        400
+      ],
+      "id": "071085da-558a-4245-9e3f-523131677d2c",
+      "name": "HTTP Request 识别保函的文本内容"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/extract-text",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "docContent"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        128,
+        208
+      ],
+      "id": "87e93445-09c4-4581-b54d-f02a63798d80",
+      "name": "HTTP Request 将文档转换为文本"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "305eb1d6-73b4-4425-8639-5c716a0e6ffd",
+              "leftValue": "={{ $json.body.tagTpye }}",
+              "rightValue": "保函产品",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        352,
+        304
+      ],
+      "id": "63150f26-bd0a-401f-a208-e72993b0d330",
+      "name": "If 判断划分维度"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request 将文档转换为文本",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request 识别保函的文本内容",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "判断保函格式",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "判断保函格式",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "判断保函产品",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "判断保函产品",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request 识别保函的文本内容": {
+      "main": [
+        [
+          {
+            "node": "If 判断划分维度",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request 将文档转换为文本": {
+      "main": [
+        [
+          {
+            "node": "If 判断划分维度",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If 判断划分维度": {
+      "main": [
+        [
+          {
+            "node": "判断保函格式",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "判断保函产品",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8d5856e9f41a6ed0359ef3ccd954a0b74158124c705e8a797b37eb3d4f883d84"
+  }
+}

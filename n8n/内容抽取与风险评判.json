@@ -1,0 +1,256 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d5db6358-59c9-4ddd-a6f9-0d03cf21a50f",
+              "leftValue": "={{ $json.body.docType }}",
+              "rightValue": "doc",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "d8168cc2-24a0-40d3-bb31-601bdf38eed9",
+              "leftValue": "={{ $json.body.docType }}",
+              "rightValue": "pdf",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        80,
+        -48
+      ],
+      "id": "cc4e02b1-6515-4b02-922e-f336cebd44ac",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/extract-text",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "docContent"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        304,
+        -144
+      ],
+      "id": "64f0449a-1fe9-4ba8-a508-2e6802572ff5",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "model": "qwen3:8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        544,
+        176
+      ],
+      "id": "cb3f618a-1fb4-4372-bccd-7e7f8f0ba2ed",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "oDWLPjLqyFZJYkpd",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-07/schema#\",\n  \"title\": \"保函风险评估结果\",\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"序号\": {\n        \"type\": \"string\",\n        \"description\": \"对应保函条款的序号\"\n      },\n      \"条款内容\": {\n        \"type\": \"string\",\n        \"description\": \"具体的条款原文内容，如果无风险则可为空字符串\"\n      },\n      \"评判理由\": {\n        \"type\": \"string\",\n        \"description\": \"对风险的分析理由，如果无风险则写 '无明显风险'\"\n      }\n    },\n    \"required\": [\"序号\", \"风险条款内容\", \"评判理由\"]\n  }\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        672,
+        176
+      ],
+      "id": "f692a499-8cca-44e7-8946-e5d98aafdfdc",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "89dc0616-eb7f-4b39-b83e-6dc208ff1782",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        -48
+      ],
+      "id": "1b650468-046f-4ee1-abf4-8622ca82f8c5",
+      "name": "Webhook1",
+      "webhookId": "89dc0616-eb7f-4b39-b83e-6dc208ff1782"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=下面提供一份保函文本：\n{{ $json.text }}\n请严格按照以下步骤输出结果：\n条款抽取：逐条分点提取保函条款，序号需与原文本一致。\n风险评估：对每个条款进行风险判断，如果存在风险，必须返回以下 JSON 格式：\n{\n  \"风险条款\": \"（标明条款原文内容）\",\n  \"评判理由\": \"（说明为什么该条款存在风险）\"\n}\n输出要求：\n必须进行分点提取，不得遗漏。\n必须输出风险条款的评估结果，即使没有风险，也要输出 { \"风险条款\": \"\", \"评判理由\": \"无明显风险\" }。\n仅输出提取条款和风险评估结果，不得输出多余解释。",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "你是一名精通金融与法律的专家，尤其熟悉保函及担保制度。你的任务包括：\n条款抽取：逐条提取保函中的条款，保持与原文相同的序号和内容，不可合并或遗漏。\n风险评估：逐条对提取的条款进行风险分析，判断是否存在潜在风险。"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        528,
+        -48
+      ],
+      "id": "04c4381e-1bc5-4281-8136-1c9d980f6bbd",
+      "name": "条款内容抽取"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/vlchat",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "docContent"
+            },
+            {
+              "name": "prompt",
+              "value": "识别并提取图片上的所有文字内容，保持原样，不要修改。 输出字段 \"文本内容\"，字符串形式保存完整文本。"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        304,
+        48
+      ],
+      "id": "8c2216d9-971b-425a-86a0-afae7ff4457a",
+      "name": "HTTP Request 识别保函的文本内容"
+    }
+  ],
+  "connections": {
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request 识别保函的文本内容",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "条款内容抽取",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "条款内容抽取",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "条款内容抽取",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "条款内容抽取": {
+      "main": [
+        []
+      ]
+    },
+    "HTTP Request 识别保函的文本内容": {
+      "main": [
+        [
+          {
+            "node": "条款内容抽取",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8d5856e9f41a6ed0359ef3ccd954a0b74158124c705e8a797b37eb3d4f883d84"
+  }
+}
