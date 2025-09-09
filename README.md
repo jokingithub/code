@@ -16,6 +16,9 @@
 - `extract-text.py`  
   将 DOC/PDF 文件抽取为文本并返回的节点。
 
+- `app`  
+  这是一个完整且规范的FastAPI样例
+
 ---
 
 ## 📦 n8n
